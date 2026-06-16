@@ -1,0 +1,11 @@
+services:
+  kb-bot:
+    build: .
+    container_name: chatwoot-kb-bot
+    restart: unless-stopped
+    ports:
+      - "3005:3005"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
