@@ -11,7 +11,7 @@ const STOP_WORDS = new Set([
   "this", "that", "these", "those", "what", "which", "who", "whom",
   "how", "when", "where", "why", "if", "then", "so", "than", "too",
   "very", "just", "about", "up", "out", "no", "yes", "hi", "hello",
-  "hey", "thanks", "thank", "please", "help", "need", "want", "get",
+  "hey", "thanks", "thank", "please", "need", "want", "get",
   "commerceship", "com", // Brand name appears everywhere, not useful for matching
 ]);
 
@@ -105,8 +105,8 @@ const SYNONYMS: Record<string, string[]> = {
   connecting: ["connect"],
   setup: ["connect", "configure", "add"],
   add: ["connect", "invite", "create"],
-  integrate: ["integration", "connect"],
-  integration: ["integrate", "connecting"],
+  integrate: ["integration", "integrations", "connect"],
+  integration: ["integrate", "integrations", "connecting"],
 
   // User / account terms
   user: ["users", "team", "member", "role"],
@@ -124,10 +124,13 @@ const SYNONYMS: Record<string, string[]> = {
   login: ["password", "2fa", "account"],
 
   // Integration terms
-  shopify: ["ecommerce", "platform", "integration"],
-  ecommerce: ["shopify", "platform", "store"],
+  integrations: ["integration", "ecommerce", "shopify", "connect", "api", "csv", "platforms"],
+  shopify: ["ecommerce", "platform", "integration", "integrations"],
+  ecommerce: ["shopify", "platform", "store", "integrations"],
   webhook: ["webhooks", "api"],
   webhooks: ["webhook"],
+  support: ["supported", "available"],
+  supported: ["support", "available"],
 
   // AI terms
   agents: ["agent", "ai"],
