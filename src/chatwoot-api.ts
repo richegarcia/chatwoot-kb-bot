@@ -5,7 +5,7 @@ const headers = {
   api_access_token: config.chatwootApiToken,
 };
 
-const base = `${config.chatwootBaseUrl}/api/v1`;
+const base = `${config.chatwootBaseUrl}/api/v1/accounts/${config.chatwootAccountId}`;
 
 export interface Article {
   id: number;
