@@ -327,7 +327,7 @@ export async function search(query: string): Promise<SearchResult | null> {
   return null;
 }
 
-export function formatResponse(article: Article): string {
+export function formatResponse(article: Article, portalSlug: string = "commerceship-help"): string {
   const sentences = article.content
     .replace(/\s+/g, " ")
     .split(/(?<=[.!?])\s+/)
@@ -336,8 +336,12 @@ export function formatResponse(article: Article): string {
   const brief = sentences.slice(0, 3).join(" ");
   const answer = brief.length > 300 ? brief.substring(0, 297) + "..." : brief;
 
+  const articleUrl = `https://help.commerceship.com/hc/${portalSlug}/articles/${article.slug}`;
+
   return [
     answer,
+    "",
+    `Read more: ${articleUrl}`,
     "",
     `Was this helpful? (yes/no)`,
     `Have another question? Just ask, or I'll connect you with our team.`,
