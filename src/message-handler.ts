@@ -1,4 +1,4 @@
-import { getConversationMessages, sendMessage } from "./chatwoot-api.js";
+import { sendMessage } from "./chatwoot-api.js";
 import {
   search,
   formatResponse,
@@ -60,15 +60,6 @@ export async function handleWebhook(payload: WebhookPayload): Promise<void> {
     return;
   }
 
-  // Check if an agent has already replied in this conversation
-  const hasAgentReply = await checkForAgentReply(conversationId);
-  if (hasAgentReply) {
-    console.log(
-      `Agent already replied in conversation ${conversationId}, deferring`
-    );
-    return;
-  }
-
   // Handle greetings
   if (isGreeting(content)) {
     await sendMessage(conversationId, formatGreeting());
@@ -94,21 +85,6 @@ export async function handleWebhook(payload: WebhookPayload): Promise<void> {
     // No match — let Google Chat alert handle it (human responds).
     // Don't send anything — silence is better than a bad answer.
   }
-}
-
-async function checkForAgentReply(
-  conversationId: number
-): Promise<boolean> {
-  const messages = await getConversationMessages(conversationId);
-  // message_type 1 = outgoing (agent/bot), sender_type "user" = agent
-  // We check if any outgoing message was sent by a human agent (not this bot).
-  // Since we can't easily distinguish bot vs agent outgoing messages,
-  // we check if there are more than 0 outgoing messages already.
-  // This means the bot only responds to the FIRST customer message
-  // before any agent/bot has replied.
-  return messages.some(
-    (m: any) => m.message_type === 1 || m.message_type === "outgoing"
-  );
 }
 
 // Clean up old cooldowns periodically
