@@ -12,46 +12,150 @@ const STOP_WORDS = new Set([
   "how", "when", "where", "why", "if", "then", "so", "than", "too",
   "very", "just", "about", "up", "out", "no", "yes", "hi", "hello",
   "hey", "thanks", "thank", "please", "help", "need", "want", "get",
+  "commerceship", "com", // Brand name appears everywhere, not useful for matching
 ]);
 
 // Short words that are meaningful in this domain (bypass length filter)
 const KEEP_SHORT = new Set([
-  "dim", "api", "csv", "mcp", "ups", "2fa", "erp", "wms", "oms",
-  "sku", "bol", "eta", "etd", "roi", "gl", "ar", "ap", "ai",
+  "dim", "api", "csv", "mcp", "ups", "2fa", "erp", "wms", "oms", "ai",
+  "sku", "bol", "eta", "etd", "roi", "gl", "ar", "ap", "gri",
 ]);
 
-// Synonyms: map common terms to canonical forms used in articles
+// Synonyms derived from actual article content analysis.
+// Maps customer query terms -> terms that appear in articles.
 const SYNONYMS: Record<string, string[]> = {
+  // Shipping cost / surcharge terms
+  dim: ["dimensional"],
   dimensional: ["dim"],
+  surcharge: ["surcharges", "fee", "fees", "charge"],
+  surcharges: ["surcharge"],
+  overcharge: ["overcharges", "discrepancy", "discrepancies"],
+  overcharges: ["overcharge"],
+  cost: ["costs", "charge", "pricing", "price", "spend"],
+  price: ["pricing", "cost", "rate"],
+  pricing: ["price", "cost", "rate"],
+  fee: ["fees", "surcharge", "charge"],
+
+  // Carrier terms
   carrier: ["carriers"],
   carriers: ["carrier"],
-  reconciliation: ["reconcile", "reconciling", "audit", "invoice audit"],
-  tracking: ["track", "tracked", "shipment tracking"],
+  fedex: ["carrier"],
+  usps: ["carrier"],
+
+  // Reconciliation / audit terms
+  reconciliation: ["reconcile", "reconciling", "audit", "invoices"],
+  reconcile: ["reconciliation"],
+  audit: ["reconciliation", "invoice"],
+  invoice: ["invoices", "billing", "reconciliation"],
+  invoices: ["invoice"],
+  claim: ["claims", "refund", "dispute"],
+  claims: ["claim"],
+  refund: ["refunds", "claim", "overcharge"],
+  refunds: ["refund"],
+  dispute: ["claim", "refund"],
+
+  // Tracking terms
+  tracking: ["track", "shipment", "delivery", "status"],
   track: ["tracking"],
+  delivery: ["delivered", "delays", "transit"],
+  delivered: ["delivery"],
+  delayed: ["delays", "delivery", "issues"],
+  delays: ["delay", "delayed"],
+  late: ["delays", "delivery", "delayed"],
+  status: ["tracking"],
+
+  // Automation terms
   automation: ["automate", "automated", "rules", "rule"],
   automate: ["automation"],
   rules: ["rule", "automation"],
-  label: ["labels", "shipping label"],
+  rule: ["rules", "automation"],
+  workflow: ["automation", "rules"],
+
+  // Label / shipping terms
+  label: ["labels", "generate", "print"],
   labels: ["label"],
+  generate: ["label", "create"],
+  ship: ["shipping", "shipment"],
+  shipping: ["shipment", "ship", "label"],
   shipment: ["shipments", "shipping"],
-  shipping: ["shipment", "ship"],
-  rate: ["rates", "pricing"],
+  shipments: ["shipment"],
+  manifest: ["manifests", "end", "day", "close"],
+  manifests: ["manifest"],
+  batch: ["bulk", "processing", "multiple"],
+
+  // Order terms
+  order: ["orders", "import"],
+  orders: ["order"],
+  import: ["importing", "upload", "csv", "sync"],
+  importing: ["import"],
+  upload: ["import", "csv"],
+  routing: ["route", "fulfillment"],
+  route: ["routing"],
+  fulfillment: ["routing", "warehouse", "3pl"],
+
+  // Rate terms
+  rate: ["rates", "pricing", "cost", "compare"],
   rates: ["rate"],
-  connect: ["connecting", "connection", "setup", "add"],
+  compare: ["comparing", "comparison", "rate", "shopping"],
+  comparing: ["compare"],
+  shopping: ["compare", "rate"],
+
+  // Carrier connection terms
+  connect: ["connecting", "connection", "setup", "add", "integrate"],
   connecting: ["connect"],
-  user: ["users", "team member", "team"],
+  setup: ["connect", "configure", "add"],
+  add: ["connect", "invite", "create"],
+  integrate: ["integration", "connect"],
+  integration: ["integrate", "connecting"],
+
+  // User / account terms
+  user: ["users", "team", "member", "role"],
   users: ["user"],
-  weight: ["dim weight", "dimensional weight"],
-  surcharge: ["surcharges", "fee", "fees"],
-  refund: ["refunds", "claim", "claims"],
-  import: ["importing", "upload"],
-  batch: ["bulk"],
-  manifest: ["manifests", "end of day"],
-  international: ["cross-border", "customs"],
-  discount: ["discounts"],
-  preset: ["presets", "package preset"],
-  dashboard: ["dashboards", "reports", "analytics"],
-  report: ["reports", "reporting"],
+  team: ["member", "user", "invite", "roles"],
+  member: ["team", "user"],
+  invite: ["add", "team", "member"],
+  role: ["roles", "permission", "access", "rbac"],
+  roles: ["role"],
+  permission: ["permissions", "role", "access"],
+  permissions: ["permission"],
+  rbac: ["role", "permission", "access"],
+  account: ["settings", "profile", "billing"],
+  password: ["login", "forgot", "reset", "2fa"],
+  login: ["password", "2fa", "account"],
+
+  // Integration terms
+  shopify: ["ecommerce", "platform", "integration"],
+  ecommerce: ["shopify", "platform", "store"],
+  webhook: ["webhooks", "api"],
+  webhooks: ["webhook"],
+
+  // AI terms
+  agents: ["agent", "ai"],
+  agent: ["agents", "ai"],
+
+  // Carrier-specific
+  customs: ["international", "cross-border", "forms"],
+  international: ["cross-border", "customs", "global"],
+
+  // Package terms
+  preset: ["presets", "package", "dimensions", "box"],
+  presets: ["preset"],
+  package: ["preset", "dimensions", "weight", "box"],
+  dimensions: ["dim", "weight", "package", "size"],
+
+  // Report terms
+  dashboard: ["dashboards", "reports", "analytics", "metrics"],
+  dashboards: ["dashboard"],
+  report: ["reports", "analytics", "insights"],
+  reports: ["report"],
+  analytics: ["report", "dashboard", "insights", "data"],
+  insights: ["ai", "report", "analytics", "weekly"],
+
+  // Discount terms
+  discount: ["discounts", "savings", "negotiated"],
+  discounts: ["discount"],
+  negotiated: ["discount", "contract", "rates"],
+  contract: ["negotiated", "rates", "carrier"],
 };
 
 // Greeting patterns
@@ -98,7 +202,7 @@ function expandWithSynonyms(tokens: string[]): string[] {
   return [...expanded];
 }
 
-// Build bigrams from tokens: ["dim", "weight"] -> ["dim weight"]
+// Build bigrams from tokens
 function bigrams(tokens: string[]): string[] {
   const result: string[] = [];
   for (let i = 0; i < tokens.length - 1; i++) {
@@ -121,7 +225,6 @@ function buildIdf(): void {
 
   idfScores = new Map();
   for (const [term, count] of termDocCount) {
-    // IDF: rare terms get high scores, common terms get low scores
     idfScores.set(term, Math.log(docCount / count) + 1);
   }
 }
@@ -177,11 +280,9 @@ export async function search(query: string): Promise<SearchResult | null> {
       const idf = idfScores.get(token) || 1;
 
       if (indexed.titleTokens.has(token)) {
-        // Title match: 3x base * IDF
         score += 3 * idf;
         matchedTerms.push(`${token}(title,idf=${idf.toFixed(1)})`);
       } else if (indexed.contentTokens.has(token)) {
-        // Content match: 1x base * IDF
         score += 1 * idf;
         matchedTerms.push(`${token}(idf=${idf.toFixed(1)})`);
       }
@@ -190,21 +291,21 @@ export async function search(query: string): Promise<SearchResult | null> {
     // Bonus: bigram/phrase matches in title or content
     for (const bigram of queryBigrams) {
       if (indexed.titleText.includes(bigram)) {
-        score += 10; // Strong bonus for phrase match in title
+        score += 10;
         matchedTerms.push(`"${bigram}"(title-phrase)`);
       } else if (indexed.contentText.includes(bigram)) {
-        score += 5; // Good bonus for phrase match in content
+        score += 5;
         matchedTerms.push(`"${bigram}"(content-phrase)`);
       }
     }
 
-    // Bonus: check if the full query appears as a substring in title
+    // Bonus: full query appears as substring in title
     if (indexed.titleText.includes(queryLower)) {
       score += 15;
       matchedTerms.push("(full-query-in-title)");
     }
 
-    // Normalize by max possible (all original tokens matched in title with max IDF + phrase bonuses)
+    // Normalize
     const maxIdf = Math.max(...rawTokens.map((t) => idfScores.get(t) || 1));
     const maxScore = rawTokens.length * 3 * maxIdf + queryBigrams.length * 10 + 15;
     const normalizedScore = score / maxScore;
@@ -227,14 +328,12 @@ export async function search(query: string): Promise<SearchResult | null> {
 }
 
 export function formatResponse(article: Article): string {
-  // Extract first 2-3 sentences from article content for a concise chat reply
   const sentences = article.content
     .replace(/\s+/g, " ")
     .split(/(?<=[.!?])\s+/)
     .filter((s) => s.length > 10);
 
   const brief = sentences.slice(0, 3).join(" ");
-  // Truncate to ~300 chars if still too long
   const answer = brief.length > 300 ? brief.substring(0, 297) + "..." : brief;
 
   return [
