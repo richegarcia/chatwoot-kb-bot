@@ -699,7 +699,8 @@ export function formatResponse(article: Article, portalSlug: string = "commerces
   return [
     answer,
     "",
-    `Read more: ${articleUrl}`,
+    `Learn more: ${article.title}`,
+    articleUrl,
     "",
     `Was this helpful? (yes/no)`,
     `Have another question? Just ask, or I'll connect you with our team.`,
