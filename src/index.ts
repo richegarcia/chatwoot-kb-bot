@@ -14,7 +14,9 @@ app.get("/health", (_req, res) => {
 // Chatwoot webhook endpoint
 app.post("/webhook", async (req, res) => {
   try {
-    await handleWebhook(req.body);
+    const body = req.body;
+    console.log(`Webhook received: event=${body.event} message_type=${body.message_type} content="${(body.content || "").substring(0, 80)}"`);
+    await handleWebhook(body);
     res.status(200).json({ ok: true });
   } catch (err) {
     console.error("Webhook error:", err);
