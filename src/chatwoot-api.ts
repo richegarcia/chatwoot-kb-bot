@@ -71,7 +71,7 @@ export async function getConversationMessages(
   conversationId: number
 ): Promise<ConversationMessage[]> {
   const res = await fetch(
-    `${base}/accounts/${config.chatwootAccountId}/conversations/${conversationId}/messages`,
+    `${base}/conversations/${conversationId}/messages`,
     { headers }
   );
   if (!res.ok) return [];
@@ -84,7 +84,7 @@ export async function sendMessage(
   content: string
 ): Promise<void> {
   const res = await fetch(
-    `${base}/accounts/${config.chatwootAccountId}/conversations/${conversationId}/messages`,
+    `${base}/conversations/${conversationId}/messages`,
     {
       method: "POST",
       headers,
