@@ -130,7 +130,7 @@ export function formatResponse(article: Article): string {
     answer,
     "",
     `Was this helpful? (yes/no)`,
-    `Have another question? Just ask — or I'll connect you with our team.`,
+    `Have another question? Just ask, or I'll connect you with our team.`,
   ].join("\n");
 }
 
