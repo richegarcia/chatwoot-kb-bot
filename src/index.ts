@@ -2,9 +2,18 @@ import express from "express";
 import { config } from "./config.js";
 import { refreshArticles } from "./article-search.js";
 import { handleWebhook } from "./message-handler.js";
+import { validateWebhookSignature } from "./safety.js";
 
 const app = express();
-app.use(express.json());
+
+// Raw body needed for HMAC validation, then parse JSON
+app.use(
+  express.json({
+    verify: (req: any, _res, buf) => {
+      req.rawBody = buf.toString();
+    },
+  })
+);
 
 // Health check
 app.get("/health", (_req, res) => {
@@ -12,10 +21,20 @@ app.get("/health", (_req, res) => {
 });
 
 // Chatwoot webhook endpoint
-app.post("/webhook", async (req, res) => {
+app.post("/webhook", async (req: any, res) => {
   try {
+    // Validate webhook signature
+    const signature = req.headers["x-chatwoot-signature"] as string | undefined;
+    if (!validateWebhookSignature(req.rawBody || "", signature)) {
+      console.warn("Webhook signature validation failed");
+      res.status(401).json({ error: "Invalid signature" });
+      return;
+    }
+
     const body = req.body;
-    console.log(`Webhook received: event=${body.event} message_type=${body.message_type} content="${(body.content || "").substring(0, 80)}"`);
+    console.log(
+      `Webhook received: event=${body.event} message_type=${body.message_type} content="${(body.content || "").substring(0, 80)}"`
+    );
     await handleWebhook(body);
     res.status(200).json({ ok: true });
   } catch (err) {
@@ -45,6 +64,9 @@ async function main() {
     console.log(`Webhook URL: http://localhost:${config.port}/webhook`);
     console.log(`Match threshold: ${config.matchThreshold}`);
     console.log(`Cooldown: ${config.cooldownSeconds}s`);
+    console.log(
+      `Safety: HMAC=${config.webhookSecret ? "on" : "off"}, maxMsg=${config.maxMessageLength}, contactRate=${config.maxContactMessagesPerMinute}/min`
+    );
   });
 }
 

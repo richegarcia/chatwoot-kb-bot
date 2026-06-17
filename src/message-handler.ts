@@ -6,16 +6,25 @@ import {
   formatGreeting,
 } from "./article-search.js";
 import { config } from "./config.js";
+import {
+  isContactRateLimited,
+  isContactConversationLimited,
+  isMessageTooLong,
+  isBotMessage,
+  isAbusiveContent,
+} from "./safety.js";
 
 // Track cooldowns: conversationId -> last bot reply timestamp
 const cooldowns = new Map<number, number>();
 
-// Track feedback: conversationId -> true if bot just responded (awaiting yes/no)
+// Track feedback: conversationId -> article title (awaiting yes/no)
 const awaitingFeedback = new Map<number, string>();
 
 // Feedback patterns
-const POSITIVE_FEEDBACK = /^(yes|yeah|yep|yup|sure|thanks|thank you|helpful|great|perfect|that helps|got it)$/i;
-const NEGATIVE_FEEDBACK = /^(no|nope|nah|not really|didn't help|wrong|that's not right|not what i meant)$/i;
+const POSITIVE_FEEDBACK =
+  /^(yes|yeah|yep|yup|sure|thanks|thank you|helpful|great|perfect|that helps|got it)$/i;
+const NEGATIVE_FEEDBACK =
+  /^(no|nope|nah|not really|didn't help|wrong|that's not right|not what i meant)$/i;
 
 // Chatwoot webhook payload types
 interface WebhookPayload {
@@ -45,6 +54,12 @@ export async function handleWebhook(payload: WebhookPayload): Promise<void> {
   // Only respond to incoming messages (from customers)
   if (payload.message_type !== "incoming") return;
 
+  // Loop prevention: ignore messages from the bot's own agent account
+  if (isBotMessage(payload.sender?.id)) {
+    console.log("Ignoring message from bot agent (loop prevention)");
+    return;
+  }
+
   // Must have conversation context
   const conversationId = payload.conversation?.id;
   if (!conversationId) return;
@@ -52,6 +67,36 @@ export async function handleWebhook(payload: WebhookPayload): Promise<void> {
   // Must have message content
   const content = payload.content?.trim();
   if (!content) return;
+
+  const contactId = payload.sender?.id || 0;
+
+  // Per-contact rate limiting
+  if (contactId && isContactRateLimited(contactId)) return;
+
+  // Per-contact conversation limiting
+  if (
+    contactId &&
+    isContactConversationLimited(contactId, conversationId)
+  )
+    return;
+
+  // Message length cap
+  if (isMessageTooLong(content)) {
+    console.log(
+      `Message too long (${content.length} chars) in conversation ${conversationId}, skipping`
+    );
+    return;
+  }
+
+  // Abuse detection
+  if (isAbusiveContent(content)) {
+    console.log(
+      `Abusive content detected in conversation ${conversationId}, skipping`
+    );
+    // Don't respond to abusive messages. Let the Google Chat alert
+    // notify the team so they can handle it as a human.
+    return;
+  }
 
   // Check if this is feedback to a previous bot response
   if (awaitingFeedback.has(conversationId)) {
@@ -63,7 +108,9 @@ export async function handleWebhook(payload: WebhookPayload): Promise<void> {
         conversationId,
         "Glad that helped! Let me know if you have other questions."
       );
-      console.log(`Positive feedback for "${articleTitle}" in conversation ${conversationId}`);
+      console.log(
+        `Positive feedback for "${articleTitle}" in conversation ${conversationId}`
+      );
       cooldowns.set(conversationId, Date.now());
       return;
     }
@@ -73,7 +120,9 @@ export async function handleWebhook(payload: WebhookPayload): Promise<void> {
         conversationId,
         "Sorry about that. Let me connect you with our team for a better answer. Someone will follow up shortly."
       );
-      console.log(`Negative feedback for "${articleTitle}" in conversation ${conversationId}`);
+      console.log(
+        `Negative feedback for "${articleTitle}" in conversation ${conversationId}`
+      );
       cooldowns.set(conversationId, Date.now());
       return;
     }
@@ -127,7 +176,4 @@ setInterval(() => {
   for (const [id, timestamp] of cooldowns) {
     if (timestamp < cutoff) cooldowns.delete(id);
   }
-  // Clean up stale feedback trackers (older than 5 minutes)
-  // Can't track time on feedback map without adding timestamps, so just clear all
-  // This is fine since feedback is only relevant immediately after a bot response
 }, 60_000);
